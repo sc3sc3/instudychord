@@ -29,7 +29,7 @@ const audio = createAudio();
 const st = {
   card: null, phase: 'prompt', paused: false, dialogOpen: false, dirtyPool: false, elapsed: 0, last: 0,
   sel: new Set(), exResult: null, exSolved: false, counted: false, firstOk: false, score: { right: 0, total: 0 },
-  cardMode: null,            // the mode the current card was made in (history needs it after a mode switch)
+  booted: false,             // false until the first card is on screen (launch must not count as an explore pick)
   history: loadHistory(),    // last 12 chords finished with, newest first
   free: null,                // free mode: result of identify() once the user pressed Reveal
 };
@@ -50,10 +50,8 @@ function nextCard() {
   const chords = enabledChords();
   const roots = enabledRoots();
   st.dirtyPool = false;
-  if (freeing()) {   // free: no random chord; the user builds one. Moving on records a revealed reading.
-    recordHistory(null);
+  if (freeing()) {   // free: no random chord; the user builds one (a reading is recorded when it is revealed)
     st.card = null;
-    st.cardMode = 'free';
     st.phase = 'prompt';
     st.elapsed = 0;
     st.sel = new Set();
@@ -65,16 +63,14 @@ function nextCard() {
   if (settings.mode === 'explore') {
     // explore: the chosen chord, always shown fully, no timers
     const next = { rootPc: settings.explore.rootPc, chord: CHORDS_BY_ID[settings.explore.chordId] };
-    recordHistory(next);
     st.card = next;
-    st.cardMode = 'explore';
     st.phase = 'revealed';
     st.elapsed = 0;
     render();
+    if (st.booted) recordHistory(next);   // an explored chord is on screen in full: record it straight away
     return;
   }
   if (!chords.length || !roots.length) {
-    recordHistory(null);
     st.card = null;
   } else {
     const prev = st.card;
@@ -88,10 +84,8 @@ function nextCard() {
         : roots.length > 1 && card.rootPc === prev.rootPc;
       if (!repeat) break;
     }
-    recordHistory(card);
     st.card = card;
   }
-  st.cardMode = settings.mode;
   st.phase = 'prompt';
   st.elapsed = 0;
   st.sel = new Set();
@@ -103,21 +97,18 @@ function nextCard() {
 }
 
 // ---------------------------------------------------------------- history
-// A card goes into the history when the user moves on from it, but only if its answer was seen
-// (revealed / solved / given up / explored); a card that is merely abandoned unseen is not recorded.
-function recordHistory(next) {
-  const prev = st.card;
-  if (!prev || st.phase !== 'revealed') return;
-  if (next && next.rootPc === prev.rootPc && next.chord.id === prev.chord.id) return; // still the same chord
-  st.history = pushHistory(st.history, {
-    rootPc: prev.rootPc,
-    chordId: prev.chord.id,
-    result: st.cardMode === 'exercise' ? (st.firstOk ? 'ok' : 'miss') : null,
-  });
+// A chord goes into the history the moment its answer is on screen: a quiz reveal, an exercise solve /
+// "Show answer", a Free-mode Reveal that found a chord, or an explore pick. Nothing is recorded for a card
+// whose answer was never shown. The same chord twice in a row is kept once (newest verdict wins).
+function recordHistory(card, result = null, bassPc = null) {
+  if (!card) return;
+  st.history = pushHistory(st.history, { rootPc: card.rootPc, chordId: card.chord.id, result, bassPc });
   saveHistory(st.history);
+  renderHistory();
 }
 
 let historyKey = '';
+
 // long names (slash chords, ...) get a smaller font so they never run under the Play button
 function setName(text) {
   el.name.textContent = text;
@@ -139,14 +130,15 @@ function renderHistory() {
     const chord = CHORDS_BY_ID[h.chordId];
     const chip = document.createElement('span');
     chip.className = 'chip';
-    const name = rootName(h.rootPc, settings.accidentals) + chord.symbol;
+    const bass = h.bassPc == null ? '' : '/' + rootName(h.bassPc, settings.accidentals);   // inversion: G/D
+    const name = rootName(h.rootPc, settings.accidentals) + chord.symbol + bass;
     if (h.result) {   // exercise verdict as a glyph, not a colour
       const mark = document.createElement('b');
       mark.textContent = h.result === 'ok' ? '\u2713' : '\u2715';
       chip.append(mark);
     }
     chip.append(name);
-    chip.title = `${name} \u2014 ${chord.name}${h.result ? (h.result === 'ok' ? ' (first try)' : ' (missed)') : ''}`;
+    chip.title = `${name} \u2014 ${chord.name}${h.bassPc == null ? '' : ' over ' + rootName(h.bassPc, settings.accidentals)}${h.result ? (h.result === 'ok' ? ' (first try)' : ' (missed)') : ''}`;
     return chip;
   }));
 }
@@ -165,8 +157,7 @@ function readingName(m, bassPc) {
 }
 
 function toggleFree(midi) {
-  if (st.phase === 'revealed') {   // editing after a reveal starts a new attempt (the shown reading goes to the history)
-    recordHistory(null);
+  if (st.phase === 'revealed') {   // editing after a reveal starts a new attempt
     st.card = null; st.free = null; st.phase = 'prompt';
   }
   if (st.sel.has(midi)) st.sel.delete(midi); else st.sel.add(midi);
@@ -179,14 +170,13 @@ function revealFree() {
   st.free = res;
   const top = res.matches[0];
   st.card = top ? { rootPc: top.rootPc, chord: top.chord } : null;
-  st.cardMode = 'free';
   st.phase = 'revealed';
   render();
+  recordHistory(st.card, null, top && !top.rootIsBass ? res.bassPc : null);   // an inversion is kept as a slash chord; nothing when no chord matched
   if (settings.sound) audio.play(sortedSel());
 }
 
 function clearFree() {
-  recordHistory(null);
   st.sel = new Set(); st.free = null; st.card = null; st.phase = 'prompt';
   render();
 }
@@ -293,6 +283,7 @@ function finishExercise(solved) {
   st.phase = 'revealed';
   st.elapsed = 0;
   render();
+  recordHistory(st.card, st.firstOk ? 'ok' : 'miss');   // right on the first check = check mark, anything else = cross
   if (solved && settings.sound) audio.play(chordMidi(st.card.rootPc, st.card.chord));
 }
 
@@ -335,6 +326,7 @@ function reveal() {
   st.phase = 'revealed';
   st.elapsed = 0;
   render();
+  recordHistory(st.card);
   if (settings.sound) audio.play(chordMidi(st.card.rootPc, st.card.chord));
 }
 
@@ -697,6 +689,7 @@ buildPicker();
 buildSettings();
 wire();
 nextCard();
+st.booted = true;
 requestAnimationFrame(loop);
 
 if ('serviceWorker' in navigator && window.isSecureContext) {

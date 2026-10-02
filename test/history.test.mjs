@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { HISTORY_MAX, sanitizeHistory, pushHistory } from '../js/history.js';
 
-const e = (rootPc, chordId, result = null) => ({ rootPc, chordId, result });
+const e = (rootPc, chordId, result = null, bassPc = null) => ({ rootPc, chordId, result, bassPc });
 
 test('history keeps the last 12, newest first', () => {
   assert.equal(HISTORY_MAX, 12);
@@ -30,4 +30,24 @@ test('sanitize drops junk and caps the length', () => {
     e(3, 'min7', 'weird'), e(4, 'dom7', 'miss')];
   assert.deepEqual(sanitizeHistory(raw), [e(0, 'maj7', 'ok'), e(3, 'min7', null), e(4, 'dom7', 'miss')]);
   assert.equal(sanitizeHistory(Array.from({ length: 30 }, () => e(0, 'maj'))).length, 12);
+});
+
+test('inversions keep their bass note: G and G/D are different entries', () => {
+  let list = pushHistory([], e(7, 'maj'));
+  list = pushHistory(list, e(7, 'maj', null, 2));            // G/D
+  assert.deepEqual(list, [e(7, 'maj', null, 2), e(7, 'maj')]);
+  list = pushHistory(list, e(7, 'maj', null, 2));            // G/D again: collapsed
+  assert.equal(list.length, 2);
+  list = pushHistory(list, e(7, 'maj', null, 11));           // G/B: another bass, new entry
+  assert.equal(list.length, 3);
+  list = pushHistory(list, e(7, 'maj'));                     // back to root position: new entry
+  assert.deepEqual(list.map(x => x.bassPc), [null, 11, 2, null]);
+});
+
+test('sanitize validates the bass note and migrates old entries', () => {
+  assert.deepEqual(sanitizeHistory([{ rootPc: 7, chordId: 'maj' }]), [e(7, 'maj')]);                 // saved before bassPc existed
+  assert.equal(sanitizeHistory([e(7, 'maj', null, 2)])[0].bassPc, 2);
+  assert.equal(sanitizeHistory([e(7, 'maj', null, 7)])[0].bassPc, null);                              // bass == root is no inversion
+  assert.equal(sanitizeHistory([e(7, 'maj', null, 12)])[0].bassPc, null);
+  assert.equal(sanitizeHistory([e(7, 'maj', null, 'x')])[0].bassPc, null);
 });
