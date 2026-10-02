@@ -19,3 +19,10 @@ test('service-worker precache lists every module and asset the app needs', () =>
   for (const f of ['index.html', 'style.css', 'manifest.webmanifest']) assert.ok(shell.includes(f), `${f} missing from SHELL`);
   for (const f of shell.filter(f => f !== './')) assert.ok(fs.existsSync(new URL(`../${f}`, import.meta.url)), `SHELL lists missing file ${f}`);
 });
+
+test('update-safety: precache bypasses the HTTP cache, registration revalidates imports, deploy stamps sw.js', () => {
+  assert.match(sw, /new Request\(url, \{ cache: 'reload' \}\)/, "sw.js must precache with cache: 'reload'");
+  assert.ok(read('js/app.js').includes("register('./sw.js', { updateViaCache: 'none' })"), "register with updateViaCache: 'none'");
+  assert.ok(read('js/app.js').includes("addEventListener('controllerchange'"), 'page must reload when an update takes over');
+  assert.match(read('deploy-pages.sh'), /sed -i "1i \/\/ deployed: \$VERSION" "\$WORK\/sw\.js"/, 'deploy script must stamp the mirror sw.js');
+});

@@ -1,3 +1,4 @@
+// deployed: v21
 // Cache-first app-shell service worker. The version lives in js/version.js (shown in the UI too):
 // bump it whenever a shell file changes so installed copies pick up the update.
 importScripts('js/version.js');
@@ -23,8 +24,14 @@ const SHELL = [
   'icons/apple-touch-icon.png',
 ];
 
+// cache: 'reload' = fetch from the network, never from the browser's HTTP cache (GitHub Pages sends
+// `cache-control: max-age=600`, so a plain addAll() could fill the new cache with files up to 10 min old).
 self.addEventListener('install', event => {
-  event.waitUntil(caches.open(CACHE).then(c => c.addAll(SHELL)).then(() => self.skipWaiting()));
+  event.waitUntil(
+    caches.open(CACHE)
+      .then(c => c.addAll(SHELL.map(url => new Request(url, { cache: 'reload' }))))
+      .then(() => self.skipWaiting()),
+  );
 });
 
 self.addEventListener('activate', event => {

@@ -63,8 +63,12 @@ It is real HTTPS, so the installed app works fully offline and keeps its setting
 Publishing is one command — `./deploy-pages.sh` runs the tests, copies this folder to the public mirror repo
 [sc3sc3/instudychord](https://github.com/sc3sc3/instudychord) and pushes; Pages rebuilds in about a minute.
 Bump `APP_VERSION` in `js/version.js` first (the version shown next to the title tells you which copy the
-iPad has; installed apps pick up an update after opening once or twice with a connection). The mirror is a
-copy only (no `CLAUDE.md`, no deploy script) and its commits use the GitHub no-reply e-mail address.
+iPad has). **Updating an installed app:** open it with a connection; the new version is fetched in the background
+and the app reloads itself once it takes over (apps older than v21 need one extra launch). If an install ever
+seems stuck on an old version: close the app completely and reopen it twice; as a last resort remove the icon and
+Safari's data for the site (Settings → Safari → Advanced → Website Data) and add it again. The mirror is a
+copy only (no `CLAUDE.md`, no deploy script; its `sw.js` carries a `// deployed: vNN` stamp so it differs on every deploy)
+and its commits use the GitHub no-reply e-mail address.
 One-time setup that was done: create the public repo, then enable Pages (Settings → Pages → *Deploy from a
 branch* → `main` / root).
 

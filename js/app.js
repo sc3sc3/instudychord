@@ -693,5 +693,17 @@ st.booted = true;
 requestAnimationFrame(loop);
 
 if ('serviceWorker' in navigator && window.isSecureContext) {
-  navigator.serviceWorker.register('./sw.js').catch(() => { /* offline support is optional */ });
+  // updateViaCache 'none': the update check also revalidates the imported js/version.js instead of trusting the
+  // 10-minute HTTP cache GitHub Pages allows (otherwise a new version can go unnoticed for 10 minutes)
+  navigator.serviceWorker.register('./sw.js', { updateViaCache: 'none' }).catch(() => { /* offline support is optional */ });
+
+  // When an update takes over (new worker activated + claimed), reload once so the page shows the new version
+  // right away instead of after the next launch. Not on the very first install (no controller yet).
+  const hadController = !!navigator.serviceWorker.controller;
+  let reloaded = false;
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if (!hadController || reloaded) return;
+    reloaded = true;
+    location.reload();
+  });
 }
