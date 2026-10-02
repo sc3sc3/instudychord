@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <rect width="512" height="512" fill="#8b909a"/>
+  <!-- keyboard motif, kept inside the central 80% (maskable safe zone) -->
+  <g transform="translate(76 120)">
+    <rect x="0"   y="0" width="72" height="272" rx="8" fill="#f0e442"/>
+    <rect x="90"  y="0" width="72" height="272" rx="8" fill="#e9ebf0"/>
+    <rect x="180" y="0" width="72" height="272" rx="8" fill="#d55e00"/>
+    <rect x="270" y="0" width="72" height="272" rx="8" fill="#e9ebf0"/>
+    <rect x="360" y="0" width="72" height="272" rx="8" fill="#2e1a6b"/>
+    <rect x="62"  y="0" width="52" height="170" rx="6" fill="#14161c"/>
+    <rect x="152" y="0" width="52" height="170" rx="6" fill="#56b4e9"/>
+    <rect x="332" y="0" width="52" height="170" rx="6" fill="#01665e"/>
+  </g>
+</svg>

@@ -1,0 +1,251 @@
+:root {
+  --bg: #f4f5f7;
+  --panel: #ffffff;
+  --ink: #15181e;
+  --muted: #5b6270;
+  --line: #d9dce3;
+  --accent: #2563eb;
+  --accent-ink: #ffffff;
+
+  --key-white: #fbfbfc;
+  --key-black: #1c1f26;
+  --key-stroke: #9aa0ad;
+  --key-label: #5b6270;
+
+  /* Role colours: validated colour-blind safe (protan/deutan/tritan, min dE2000 >= 20, and >= 15 from the grey key) and five
+     distinct lightness levels (greyscale-safe). test/cvd.test.mjs enforces this - re-run it after edits. */
+  --c-root: #f0e442;
+  --c-third: #56b4e9;
+  --c-fifth: #d55e00;
+  --c-seventh: #01665e;
+  --c-extension: #2e1a6b;
+  --key-on: #8b909a;
+  --key-on-stroke: #5f6470;
+  --ink-on-grey: #15181e;
+  --ink-on-color: #ffffff;
+  --ink-on-third: #20160a;
+
+  color-scheme: light dark;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0f1115;
+    --panel: #181b22;
+    --ink: #eceef3;
+    --muted: #9aa1b1;
+    --line: #2c313c;
+    --accent: #5b8cff;
+    --accent-ink: #0b1020;
+
+    --key-white: #e9ebf0;
+    --key-black: #14161c;
+    --key-stroke: #3a3f4b;
+    --key-label: #5b6270;
+  }
+}
+
+* { box-sizing: border-box; }
+
+html, body { height: 100%; }
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font: 16px/1.4 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  -webkit-text-size-adjust: 100%;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+  user-select: none;
+  -webkit-user-select: none;
+  padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+
+  /* the whole app is exactly one viewport tall: nothing may need scrolling (tiny screens still can) */
+  height: 100vh;
+  height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+}
+
+#app {
+  flex: 1 1 auto;
+  width: 100%;
+  max-width: 1180px;
+  min-height: 460px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  padding: 0 16px;
+}
+
+/* ---- header ---- */
+.top {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 0;
+  padding: clamp(6px, 1.2dvh, 12px) 0;
+  flex-wrap: wrap;
+  flex: none;
+}
+.top h1 { font-size: 1.1rem; margin: 0; flex: 1 1 auto; letter-spacing: .02em; }
+.ver { margin-left: 6px; font-size: .75rem; font-weight: 400; color: var(--muted); letter-spacing: 0; }
+
+.seg { display: inline-flex; border: 1px solid var(--line); border-radius: 12px; overflow: hidden; background: var(--panel); }
+.seg button {
+  border: 0; background: transparent; color: var(--ink);
+  padding: 0 16px; min-height: 44px; font: inherit; cursor: pointer;
+}
+.seg button[aria-selected="true"] { background: var(--accent); color: var(--accent-ink); font-weight: 600; }
+
+button {
+  font: inherit; color: var(--ink);
+  min-height: 44px; padding: 0 18px;
+  border-radius: 12px; border: 1px solid var(--line);
+  background: var(--panel); cursor: pointer;
+}
+button.primary { background: var(--accent); color: var(--accent-ink); border-color: transparent; font-weight: 600; }
+button.ghost { background: transparent; }
+button.small { min-height: 36px; padding: 0 14px; }
+button:disabled { opacity: .45; cursor: default; }
+button:focus-visible, input:focus-visible, select:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+
+/* ---- stage ---- */
+#stage {
+  flex: 1 1 auto; min-height: 0;
+  display: flex; flex-direction: column;
+  justify-content: space-between;      /* leftover height on tall screens is spread evenly between sections */
+  gap: 10px; gap: clamp(6px, 1.3dvh, 14px);
+  padding-bottom: 14px; padding-bottom: clamp(8px, 1.6dvh, 20px);
+  cursor: pointer;
+}
+.picker, .status, .kb-wrap, .legend, .details, .controls { flex: none; }   /* only .card flexes; the rest keeps its size */
+
+.card {
+  position: relative;
+  background: var(--panel); border: 1px solid var(--line); border-radius: 20px;
+  padding: 8px 16px; text-align: center;
+  flex: 1 1 auto; min-height: 92px; max-height: 440px; overflow: hidden;   /* absorbs spare height up to a cap */
+  display: flex; flex-direction: column; justify-content: center; gap: 4px;
+}
+.chord-name {
+  font-size: clamp(2.2rem, min(11vw, 12vh), 6.5rem);
+  font-size: clamp(2.2rem, min(11vw, 12dvh), 6.5rem);
+  font-weight: 700; line-height: 1.05; letter-spacing: -.01em;
+}
+.chord-long {
+  color: var(--muted); min-height: 1.4em;
+  font-size: clamp(.9rem, min(2.4vw, 2.6vh), 1.35rem);
+  font-size: clamp(.9rem, min(2.4vw, 2.6dvh), 1.35rem);
+}
+
+.status { display: flex; align-items: center; gap: 12px; color: var(--muted); font-size: .9rem; }
+.bar { flex: 1; height: 8px; border-radius: 4px; background: var(--line); overflow: hidden; }
+.bar i { display: block; height: 100%; width: 100%; background: var(--accent); transform-origin: left center; transform: scaleX(0); }
+#statusText { min-width: 12ch; text-align: right; font-variant-numeric: tabular-nums; }
+
+/* ---- explore mode: chord picker replaces timer + quiz controls ---- */
+.picker { display: none; gap: 10px; cursor: default; }
+#stage[data-mode="explore"] .picker { display: grid; }
+#stage[data-mode="explore"] .status,
+#stage[data-mode="explore"] .controls { display: none; }
+#stage[data-mode="explore"] { cursor: default; }
+
+.root-picker { display: grid; grid-template-columns: repeat(12, 1fr); gap: 6px; }
+.root-picker button { padding: 0; min-width: 0; }
+.root-picker button[aria-pressed="true"] { background: var(--c-root); color: var(--ink-on-third); border-color: transparent; font-weight: 700; }
+.chord-picker { display: grid; grid-template-columns: 56px 1fr 56px; gap: 8px; }
+.chord-picker select { font-size: 1.05rem; min-width: 0; }
+.chord-picker button { padding: 0; font-size: 1.6rem; line-height: 1; }
+
+/* ---- play button (top-right corner of the card; the card is not a tap target for it) ---- */
+.play { position: absolute; top: 10px; right: 10px; min-height: 44px; padding: 0 16px; font-weight: 600; z-index: 1; }
+.play span { font-size: 1.15em; }
+
+/* ---- keyboard ---- */
+.kb-wrap { cursor: default; }
+#keyboard { display: block; width: 100%; height: auto; touch-action: none; -webkit-user-select: none; max-height: 34vh; max-height: 34dvh; }   /* keeps its aspect, never taller than a third of the screen */
+.key { stroke: var(--key-stroke); stroke-width: 1; cursor: pointer; }
+.key.pressed { opacity: .6; }
+.key.white { fill: var(--key-white); }
+.key.black { fill: var(--key-black); }
+.key.on { fill: var(--key-on); stroke: var(--key-on-stroke); stroke-width: 1.5; }
+
+/* degree badges: the function colour lives here, not on the key */
+.badge { stroke: var(--ink-on-grey); stroke-width: 1.5; pointer-events: none; }   /* taps always land on the key itself */
+.badge.mark { fill: #ffffff; }
+.badge.role-root { fill: var(--c-root); }
+.badge.role-third { fill: var(--c-third); }
+.badge.role-fifth { fill: var(--c-fifth); }
+.badge.role-seventh { fill: var(--c-seventh); }
+.badge.role-extension { fill: var(--c-extension); }
+.deg { font: 700 14px -apple-system, "Segoe UI", Roboto, sans-serif; fill: var(--ink-on-color); pointer-events: none; }
+.deg.small { font-size: 10px; }
+.deg.mark { fill: var(--ink-on-grey); }
+.deg.role-root, .deg.role-third, .deg.role-fifth { fill: var(--ink-on-third); } /* dark ink on the light badges */
+.name { font: 600 13px -apple-system, "Segoe UI", Roboto, sans-serif; fill: var(--ink-on-grey); pointer-events: none; }
+.name.small { font-size: 10px; }
+
+.legend { display: flex; flex-wrap: wrap; gap: 8px 18px; justify-content: center; color: var(--muted); font-size: .9rem; }
+.legend span { display: inline-flex; align-items: center; gap: 7px; }
+.legend i { width: 14px; height: 14px; border-radius: 50%; display: inline-block; box-shadow: 0 0 0 1.5px var(--ink-on-grey); }
+.legend .role-root { background: var(--c-root); }
+.legend .role-third { background: var(--c-third); }
+.legend .role-fifth { background: var(--c-fifth); }
+.legend .role-seventh { background: var(--c-seventh); }
+.legend .role-extension { background: var(--c-extension); }
+
+/* fixed-size 2x2 grid; when hidden it only turns invisible, so revealing never moves anything */
+.details {
+  background: var(--panel); border: 1px solid var(--line); border-radius: 16px;
+  padding: 8px 16px; display: grid; grid-template-columns: 1fr 1fr; gap: 2px 20px; cursor: default;
+}
+.details[hidden], .details > div[hidden] { display: grid; visibility: hidden; }
+.details > div { display: flex; flex-direction: column; min-width: 0; }
+.details > div[hidden] { display: flex; }
+.details .k { color: var(--muted); font-size: .78rem; line-height: 1.3; }
+.details span:last-child { font-size: 1rem; line-height: 1.3; min-height: 1.3em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.controls { display: flex; gap: 12px; justify-content: center; cursor: default; }
+.controls button { min-width: 140px; }
+
+/* ---- settings dialog ---- */
+dialog {
+  width: min(680px, 94vw); max-height: 90vh; overflow-y: auto; overscroll-behavior: contain;
+  padding: 0; border: 1px solid var(--line);
+  border-radius: 20px; background: var(--bg); color: var(--ink);
+}
+dialog::backdrop { background: rgba(0, 0, 0, .5); }
+dialog form { padding: 16px; display: grid; gap: 14px; }
+.dlg-head { display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; background: var(--bg); padding-bottom: 4px; }
+.dlg-head h2 { margin: 0; font-size: 1.2rem; }
+fieldset { border: 1px solid var(--line); border-radius: 14px; background: var(--panel); padding: 10px 14px 14px; margin: 0; }
+legend { padding: 0 6px; font-weight: 600; }
+.muted { color: var(--muted); font-weight: 400; font-size: .85rem; }
+.slider { display: grid; grid-template-columns: 1fr auto; gap: 4px 12px; padding: 6px 0; align-items: center; }
+.slider input { grid-column: 1 / -1; width: 100%; min-height: 32px; }
+.checks { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 2px 12px; }
+.checks.roots { grid-template-columns: repeat(auto-fill, minmax(64px, 1fr)); }
+.check, .checks label { display: flex; align-items: center; gap: 10px; min-height: 44px; }
+input[type="checkbox"] { width: 22px; height: 22px; accent-color: var(--accent); flex: none; }
+.row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-top: 8px; }
+.inline { display: inline-flex; gap: 8px; align-items: center; margin-left: auto; }
+select { font: inherit; min-height: 44px; border-radius: 10px; border: 1px solid var(--line); background: var(--panel); color: var(--ink); padding: 0 10px; }
+
+@media (max-width: 560px) {
+  .root-picker { grid-template-columns: repeat(6, 1fr); }
+  .details { grid-template-columns: 1fr; }
+  .controls button { flex: 1; }
+}
+
+/* very short screens (e.g. landscape with browser toolbars): tighten chrome so everything still fits */
+@media (max-height: 680px) {
+  .top { padding: 4px 0; }
+  button, .seg button { min-height: 40px; }
+  .root-picker button, .chord-picker button, .chord-picker select { min-height: 38px; }
+  .details { padding: 6px 14px; }
+  .legend { font-size: .8rem; }
+  .card { min-height: 80px; }
+}
