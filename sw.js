@@ -14,6 +14,8 @@ const SHELL = [
   'js/audio.js',
   'js/settings.js',
   'js/exercise.js',
+  'js/history.js',
+  'js/identify.js',
   'js/version.js',
   'icons/icon.svg',
   'icons/icon-192.png',

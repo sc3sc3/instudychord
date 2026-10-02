@@ -12,12 +12,23 @@ Vanilla HTML/CSS/ES modules — no build step, no dependencies.
 - **Exercise** (name → keys, *you* play it): the chord name is shown, the keyboard is blank. Tap the keys of
   the chord (tap again to deselect; every tap sounds its note). It checks automatically once you have as many
   distinct notes as the chord needs, or press **Check**. Wrong keys get a ✕, and the status says how many are
-  wrong / missing; fix them and it re-checks. When right (or after **Show answer**) the true voicing appears
-  with its colour-coded numbers, then **Next**. A first-try score is shown (`3/7 first try`). By default any
+  wrong / missing; fix them and it re-checks. When right the true voicing appears (grey keys with
+  colour-coded numbers); after **Show answer** the keys of the drawn answer are **yellow** instead (and only those:
+  your own picks stay grey, wrong ones with a ✕), so a miss stands out from a solve. Then **Next**. A first-try score is shown (`3/7 first try`). By default any
   octave counts; the setting *Exercise: require the exact voicing* demands the exact keys as drawn.
+- **Free** (you play, the app names it): tap any keys on the blank keyboard (each tap sounds its note; tap a
+  selected key again to remove it), then press **Reveal**. The app names the chord, with the lowest key as the
+  root when possible and a slash chord for inversions (`Cmaj7/E`), shows your keys with colour-coded numbers
+  relative to the found root, and lists other readings under *Could also be* (C E G A → `C6`, also `Am7/C`).
+  If nothing sounds exactly those notes it says so and suggests close chords with a note missing (C E B →
+  `Cmaj7 (no G)`). **Clear** starts over; ♪ **Play** sounds your own keys. Needs at least 2 different notes.
 - **Keys → Name:** the keyboard appears first; the name is revealed after the delay or on tap.
 - **Explore:** pick any root (12 buttons) and any of the 102 chord types (dropdown or ‹ › stepper) and
   see it drawn immediately — no timer, always fully revealed. The choice is remembered.
+- **History:** a strip of small chips above the chord card shows the last **12 chords** you finished with,
+  newest first (one row of 12 on wide screens, 6×2 in portrait). A chord is recorded when you move on from it
+  after seeing its answer; in Exercise mode the chip carries ✓ (right first try) or ✕ (missed / answer shown),
+  and Explore records the chords you pick. Kept across restarts; *Clear chord history* is in Settings.
 - 102 chords in 12 checkbox groups: triads, suspended (`sus2`, `7sus2`, `maj7sus4`, `7sus4♭9` …), add
   chords (`add♯11`, `m(add11)` …), sixths, sevenths, ninths, elevenths, thirteenths, Lydian / ♯11,
   altered fifths (incl. whole-tone `9♯5♯11`), altered dominants (`7alt`, `13♭9♯11`, `7♭9♭13` …) and

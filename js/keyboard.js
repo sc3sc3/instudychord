@@ -76,13 +76,15 @@ function decorate(g, note, opts) {
   }
 }
 
-// notes: Map midi -> { role, degree, name, plain?, mark? }.  Pass an empty Map for a blank keyboard.
+// notes: Map midi -> { role, degree, name, plain?, mark?, answer? }.  Pass an empty Map for a blank keyboard.
 // opts:  neutral (grey keys only: no degree badges), degrees, names (label toggles).
 export function renderKeyboard(svg, notes, opts = {}) {
   if (!svg.dataset.built) build(svg);
   for (const g of svg.querySelectorAll(':scope > g[data-midi]')) {
     const note = notes.get(Number(g.dataset.midi));
-    g.firstElementChild.classList.toggle('on', !!note);   // classList: keeps a transient "pressed" class intact
+    const rect = g.firstElementChild;   // classList: keeps a transient "pressed" class intact
+    rect.classList.toggle('on', !!note);
+    rect.classList.toggle('answer', !!note?.answer);   // exercise "Show answer": the correct keys
     decorate(g, note, opts);
   }
 }

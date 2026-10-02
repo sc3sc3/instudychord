@@ -6,7 +6,7 @@ const KEY = 'inStudyChord.settings.v1';
 
 export function defaults() {
   return {
-    mode: 'name2keys',          // 'name2keys' | 'keys2name' | 'exercise' | 'explore'
+    mode: 'name2keys',          // 'name2keys' | 'keys2name' | 'exercise' | 'free' | 'explore'
     explore: { rootPc: 0, chordId: 'maj7' }, // chord shown in explore mode
     schema: 2,                  // bump when a default changes meaning (see sanitize)
     revealSec: 0,               // seconds until the answer side appears (0 = never automatically: tap to reveal)
@@ -31,7 +31,7 @@ export function sanitize(raw) {
   const groups = {};
   for (const g of GROUPS) groups[g.id] = bool(r.groups?.[g.id], d.groups[g.id]);
   return {
-    mode: ['keys2name', 'exercise', 'explore'].includes(r.mode) ? r.mode : 'name2keys',
+    mode: ['keys2name', 'exercise', 'free', 'explore'].includes(r.mode) ? r.mode : 'name2keys',
     explore: {
       rootPc: Number.isInteger(r.explore?.rootPc) && r.explore.rootPc >= 0 && r.explore.rootPc < 12
         ? r.explore.rootPc : d.explore.rootPc,

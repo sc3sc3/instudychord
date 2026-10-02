@@ -73,6 +73,7 @@ test('every chord in every root solves with its own voicing in both modes', () =
 
 test('settings: exercise mode and exactVoicing are sanitized', () => {
   assert.equal(sanitize({ mode: 'exercise' }).mode, 'exercise');
+  assert.equal(sanitize({ mode: 'free' }).mode, 'free');
   assert.equal(sanitize({}).exactVoicing, false);
   assert.equal(sanitize({ exactVoicing: true }).exactVoicing, true);
   assert.equal(sanitize({ exactVoicing: 'yes' }).exactVoicing, false);

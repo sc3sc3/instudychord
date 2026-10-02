@@ -24,12 +24,15 @@
         <button type="button" role="tab" data-mode="name2keys">Name &rarr; Keys</button>
         <button type="button" role="tab" data-mode="keys2name">Keys &rarr; Name</button>
         <button type="button" role="tab" data-mode="exercise">Exercise</button>
+        <button type="button" role="tab" data-mode="free">Free</button>
         <button type="button" role="tab" data-mode="explore">Explore</button>
       </div>
       <button type="button" id="openSettings" class="ghost">Settings</button>
     </header>
 
     <main id="stage">
+      <div id="history" class="history" aria-label="Last chords"></div>
+
       <section class="card">
         <button type="button" id="playBtn" class="play" aria-label="Play chord" title="Play the chord shown on the keyboard"><span aria-hidden="true">&#9834;</span> Play</button>
         <div id="chordName" class="chord-name" aria-live="polite"></div>
@@ -56,8 +59,8 @@
       <section id="details" class="details" hidden>
         <div><span class="k">Notes</span><span id="dNotes"></span></div>
         <div><span class="k">Degrees</span><span id="dDegrees"></span></div>
-        <div id="dAliasRow"><span class="k">Also written</span><span id="dAliases"></span></div>
-        <div id="dSameRow"><span class="k">Same notes as</span><span id="dSame"></span></div>
+        <div id="dAliasRow"><span class="k" id="dAliasLabel">Also written</span><span id="dAliases"></span></div>
+        <div id="dSameRow"><span class="k" id="dSameLabel">Same notes as</span><span id="dSame"></span></div>
       </section>
 
       <div class="controls">
@@ -112,6 +115,7 @@
         <label class="check"><input type="checkbox" id="noteNames"> Note names on keys</label>
         <label class="check"><input type="checkbox" id="colorBefore"> Keys &rarr; Name: show the colour-coded numbers before reveal (easier)</label>
         <label class="check"><input type="checkbox" id="exactVoicing"> Exercise: require the exact voicing (right octaves), not just the notes</label>
+        <div class="row"><button type="button" id="clearHistory" class="ghost small">Clear chord history</button></div>
         <label class="check"><input type="checkbox" id="sound"> Auto-play the chord on reveal and when picking a chord</label>
       </fieldset>
     </form>

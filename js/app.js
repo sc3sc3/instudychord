@@ -5,13 +5,15 @@ import { renderKeyboard } from './keyboard.js';
 import { createAudio } from './audio.js';
 import { evaluate, isRightKey, needed, readyToCheck, selectedCount } from './exercise.js';
 import { loadSettings, saveSettings } from './settings.js';
+import { loadHistory, saveHistory, pushHistory } from './history.js';
+import { identify } from './identify.js';
 
 const $ = id => document.getElementById(id);
 const el = {
   name: $('chordName'), long: $('chordLong'), kb: $('keyboard'), legend: $('legend'),
   details: $('details'), dNotes: $('dNotes'), dDegrees: $('dDegrees'),
-  dAliasRow: $('dAliasRow'), dAliases: $('dAliases'), dSameRow: $('dSameRow'), dSame: $('dSame'),
-  barFill: $('barFill'), statusText: $('statusText'),
+  dAliasLabel: $('dAliasLabel'), dSameLabel: $('dSameLabel'), dAliasRow: $('dAliasRow'), dAliases: $('dAliases'), dSameRow: $('dSameRow'), dSame: $('dSame'),
+  barFill: $('barFill'), statusText: $('statusText'), history: $('history'),
   pause: $('pauseBtn'), play: $('playBtn'), action: $('actionBtn'), stage: $('stage'), dialog: $('settings'),
 };
 
@@ -26,7 +28,10 @@ const audio = createAudio();
 // exercise mode adds: sel = keys the user tapped, exResult = last verdict, exSolved, counted (scored once per card)
 const st = {
   card: null, phase: 'prompt', paused: false, dialogOpen: false, dirtyPool: false, elapsed: 0, last: 0,
-  sel: new Set(), exResult: null, exSolved: false, counted: false, score: { right: 0, total: 0 },
+  sel: new Set(), exResult: null, exSolved: false, counted: false, firstOk: false, score: { right: 0, total: 0 },
+  cardMode: null,            // the mode the current card was made in (history needs it after a mode switch)
+  history: loadHistory(),    // last 12 chords finished with, newest first
+  free: null,                // free mode: result of identify() once the user pressed Reveal
 };
 const shown = { bar: -1, text: null, action: null, pause: null };
 
@@ -45,15 +50,31 @@ function nextCard() {
   const chords = enabledChords();
   const roots = enabledRoots();
   st.dirtyPool = false;
+  if (freeing()) {   // free: no random chord; the user builds one. Moving on records a revealed reading.
+    recordHistory(null);
+    st.card = null;
+    st.cardMode = 'free';
+    st.phase = 'prompt';
+    st.elapsed = 0;
+    st.sel = new Set();
+    st.free = null;
+    st.exResult = null; st.exSolved = false; st.counted = false; st.firstOk = false;
+    render();
+    return;
+  }
   if (settings.mode === 'explore') {
     // explore: the chosen chord, always shown fully, no timers
-    st.card = { rootPc: settings.explore.rootPc, chord: CHORDS_BY_ID[settings.explore.chordId] };
+    const next = { rootPc: settings.explore.rootPc, chord: CHORDS_BY_ID[settings.explore.chordId] };
+    recordHistory(next);
+    st.card = next;
+    st.cardMode = 'explore';
     st.phase = 'revealed';
     st.elapsed = 0;
     render();
     return;
   }
   if (!chords.length || !roots.length) {
+    recordHistory(null);
     st.card = null;
   } else {
     const prev = st.card;
@@ -67,15 +88,184 @@ function nextCard() {
         : roots.length > 1 && card.rootPc === prev.rootPc;
       if (!repeat) break;
     }
+    recordHistory(card);
     st.card = card;
   }
+  st.cardMode = settings.mode;
   st.phase = 'prompt';
   st.elapsed = 0;
   st.sel = new Set();
   st.exResult = null;
   st.exSolved = false;
   st.counted = false;
+  st.firstOk = false;
   render();
+}
+
+// ---------------------------------------------------------------- history
+// A card goes into the history when the user moves on from it, but only if its answer was seen
+// (revealed / solved / given up / explored); a card that is merely abandoned unseen is not recorded.
+function recordHistory(next) {
+  const prev = st.card;
+  if (!prev || st.phase !== 'revealed') return;
+  if (next && next.rootPc === prev.rootPc && next.chord.id === prev.chord.id) return; // still the same chord
+  st.history = pushHistory(st.history, {
+    rootPc: prev.rootPc,
+    chordId: prev.chord.id,
+    result: st.cardMode === 'exercise' ? (st.firstOk ? 'ok' : 'miss') : null,
+  });
+  saveHistory(st.history);
+}
+
+let historyKey = '';
+// long names (slash chords, ...) get a smaller font so they never run under the Play button
+function setName(text) {
+  el.name.textContent = text;
+  el.name.classList.toggle('long', text.length > 12);
+}
+
+function renderHistory() {
+  const key = JSON.stringify(st.history) + settings.accidentals;
+  if (key === historyKey) return;     // only rebuild when something changed
+  historyKey = key;
+  if (!st.history.length) {
+    const none = document.createElement('span');
+    none.className = 'none';
+    none.textContent = 'Your last 12 chords will appear here';
+    el.history.replaceChildren(none);
+    return;
+  }
+  el.history.replaceChildren(...st.history.map(h => {
+    const chord = CHORDS_BY_ID[h.chordId];
+    const chip = document.createElement('span');
+    chip.className = 'chip';
+    const name = rootName(h.rootPc, settings.accidentals) + chord.symbol;
+    if (h.result) {   // exercise verdict as a glyph, not a colour
+      const mark = document.createElement('b');
+      mark.textContent = h.result === 'ok' ? '\u2713' : '\u2715';
+      chip.append(mark);
+    }
+    chip.append(name);
+    chip.title = `${name} \u2014 ${chord.name}${h.result ? (h.result === 'ok' ? ' (first try)' : ' (missed)') : ''}`;
+    return chip;
+  }));
+}
+
+// ---------------------------------------------------------------- free mode (the user builds a chord, the app names it)
+const freeing = () => settings.mode === 'free';
+const noTimers = () => settings.mode === 'explore' || settings.mode === 'exercise' || freeing();
+const distinctPcs = () => new Set([...st.sel].map(m => m % 12)).size;
+const freeResult = () => (st.phase === 'revealed' ? st.free : null);
+const sortedSel = () => [...st.sel].sort((a, b) => a - b);
+
+// "C", "Cmaj7/E": the chord symbol plus the bass note when the lowest key is not the root (an inversion)
+function readingName(m, bassPc) {
+  const base = rootName(m.rootPc, settings.accidentals) + m.chord.symbol;
+  return m.rootIsBass ? base : `${base}/${rootName(bassPc, settings.accidentals)}`;
+}
+
+function toggleFree(midi) {
+  if (st.phase === 'revealed') {   // editing after a reveal starts a new attempt (the shown reading goes to the history)
+    recordHistory(null);
+    st.card = null; st.free = null; st.phase = 'prompt';
+  }
+  if (st.sel.has(midi)) st.sel.delete(midi); else st.sel.add(midi);
+  render();
+}
+
+function revealFree() {
+  if (!freeing() || st.phase === 'revealed' || distinctPcs() < 2) return;
+  const res = identify(st.sel);
+  st.free = res;
+  const top = res.matches[0];
+  st.card = top ? { rootPc: top.rootPc, chord: top.chord } : null;
+  st.cardMode = 'free';
+  st.phase = 'revealed';
+  render();
+  if (settings.sound) audio.play(sortedSel());
+}
+
+function clearFree() {
+  recordHistory(null);
+  st.sel = new Set(); st.free = null; st.card = null; st.phase = 'prompt';
+  render();
+}
+
+function renderFree() {
+  const acc = settings.accidentals;
+  const sorted = sortedSel();
+  const res = freeResult();
+  const top = res?.matches[0];
+  const pcName = m => rootName(m % 12, acc);
+
+  let title, sub;
+  if (!res) {
+    title = sorted.length ? `${sorted.length} note${sorted.length > 1 ? 's' : ''}` : '\u266a';
+    sub = sorted.length ? 'press Reveal to name the chord' : 'tap keys to build your own chord';
+  } else if (top) {
+    title = readingName(top, res.bassPc);
+    sub = top.chord.name + (top.rootIsBass ? '' : ` over ${rootName(res.bassPc, acc)}`);
+  } else {
+    title = '?';
+    sub = 'no chord in the catalogue sounds exactly these notes';
+  }
+  setName(title);
+  el.long.textContent = sub;
+
+  // the user's own keys; once named they get the colour-coded degree numbers relative to the found root
+  const notes = new Map();
+  if (top) {
+    const spelled = spellChord(rootName(top.rootPc, acc), top.chord);
+    const rel = new Map(top.chord.tones.map((t, i) => [t.semis % 12, { role: t.role, degree: t.label, name: spelled[i] }]));
+    for (const m of sorted) notes.set(m, rel.get((((m - top.rootPc) % 12) + 12) % 12) ?? { plain: true, name: pcName(m) });
+  } else {
+    for (const m of sorted) notes.set(m, { plain: true, name: pcName(m) });
+  }
+  renderKeyboard(el.kb, notes, { neutral: false, degrees: settings.degreeLabels, names: settings.noteNames });
+
+  el.play.disabled = !sorted.length;
+  el.details.hidden = !res;
+  if (!res) return;
+  el.dNotes.textContent = sorted.map(m => notes.get(m).name).join('  ');
+  el.dDegrees.textContent = top ? sorted.map(m => notes.get(m).degree).join('  ') : '\u2014';
+  if (top) {
+    const slash = top.rootIsBass ? '' : '/' + rootName(res.bassPc, acc);
+    const aliases = top.chord.aliases.map(a => rootName(top.rootPc, acc) + a + slash);
+    el.dAliasLabel.textContent = 'Also written';
+    el.dAliasRow.hidden = !aliases.length;
+    el.dAliases.textContent = aliases.join('   \u00b7   ');
+    const others = res.matches.slice(1, 7).map(m => readingName(m, res.bassPc));
+    el.dSameLabel.textContent = 'Could also be';
+    el.dSameRow.hidden = !others.length;
+    el.dSame.textContent = others.join(',  ');
+  } else {   // nothing sounds exactly these notes: offer chords that contain them plus one more (an omitted note)
+    const near = res.near.map(n => {
+      const sp = spellChord(rootName(n.rootPc, acc), n.chord);
+      const missing = sp[n.chord.tones.findIndex(t => (n.rootPc + t.semis) % 12 === n.missingPc)];
+      return `${readingName(n, res.bassPc)} (no ${missing})`;
+    });
+    el.dAliasLabel.textContent = 'Close to';
+    el.dAliasRow.hidden = !near.length;
+    el.dAliases.textContent = near.join(',  ');
+    el.dSameRow.hidden = true;
+  }
+}
+
+function updateFreeStatus(force) {
+  const n = st.sel.size, pcs = distinctPcs(), res = freeResult();
+  let text;
+  if (res) text = res.matches.length ? `Found \u00b7 ${res.matches.length === 1 ? '1 reading' : res.matches.length + ' readings'}` : 'No exact match';
+  else if (!n) text = 'Tap keys to build a chord';
+  else if (pcs < 2) text = `${n} note \u2014 pick at least 2 different notes`;
+  else text = `${n} notes selected \u00b7 press Reveal`;
+  const frac = res ? (res.matches.length ? 1 : 0) : Math.min(1, pcs / 3);
+  const barKey = Math.round(frac * 1000);
+  if (force || barKey !== shown.bar) { el.barFill.style.transform = `scaleX(${frac})`; shown.bar = barKey; }
+  if (force || text !== shown.text) { el.statusText.textContent = text; shown.text = text; }
+  if (force || shown.action !== 'Reveal') { el.action.textContent = 'Reveal'; shown.action = 'Reveal'; }
+  if (force || shown.pause !== 'Clear') { el.pause.textContent = 'Clear'; shown.pause = 'Clear'; }
+  el.action.disabled = pcs < 2 || !!res;
+  el.pause.disabled = n === 0;
 }
 
 // ---------------------------------------------------------------- exercise (name -> keys, tapped by the user)
@@ -85,6 +275,7 @@ const exercising = () => settings.mode === 'exercise';
 function countCard(ok) {
   if (st.counted) return;
   st.counted = true;
+  st.firstOk = ok;
   st.score.total++;
   if (ok) st.score.right++;
 }
@@ -112,6 +303,7 @@ function giveUp() {
 }
 
 function toggleKey(midi) {
+  if (freeing()) { toggleFree(midi); return; }
   if (!exercising() || !st.card || st.phase !== 'prompt') return;
   if (st.sel.has(midi)) st.sel.delete(midi); else st.sel.add(midi);
   st.exResult = null; // any change clears the previous verdict's crosses
@@ -125,11 +317,14 @@ function exerciseNotes(rootPc, chord, chordNotes, revealed, spelled) {
   const nameOf = m => byPc.get(m % 12) ?? rootName(m % 12, settings.accidentals);
   const flagged = new Set(st.exResult && !st.exResult.ok ? st.exResult.wrong : []);
   const out = new Map();
-  if (revealed) for (const [m, n] of chordNotes) out.set(m, n); // the answer, with its colour-coded numbers
+  const gaveUp = revealed && !st.exSolved;   // "Show answer": the keys of the drawn answer are yellow instead of grey
+  if (revealed) for (const [m, n] of chordNotes) out.set(m, gaveUp ? { ...n, answer: true } : n); // the answer, with its colour-coded numbers
   for (const m of st.sel) {
     if (out.has(m)) continue;
     const right = isRightKey(m, rootPc, chord, exact);
-    out.set(m, !right && (revealed || flagged.has(m)) ? { mark: true, name: nameOf(m) } : { plain: true, name: nameOf(m) });
+    out.set(m, !right && (revealed || flagged.has(m))
+      ? { mark: true, name: nameOf(m) }
+      : { plain: true, name: nameOf(m) });   // never yellow: yellow means exactly the keys of the drawn answer
   }
   return out;
 }
@@ -144,6 +339,7 @@ function reveal() {
 }
 
 function advance() {
+  if (freeing()) { revealFree(); return; }
   if (!st.card || settings.mode === 'explore') return;
   if (exercising()) { if (st.phase === 'revealed') nextCard(); else checkExercise(); return; }
   if (st.phase === 'prompt') reveal(); else nextCard();
@@ -158,7 +354,7 @@ function loop(ts) {
   requestAnimationFrame(loop);
   const dt = st.last ? Math.min(ts - st.last, 250) : 0; // clamp: tab was in background
   st.last = ts;
-  if (st.card && settings.mode !== 'explore' && !exercising() && !st.paused && !st.dialogOpen) {
+  if (st.card && !noTimers() && !st.paused && !st.dialogOpen) {
     st.elapsed += dt;
     if (st.elapsed >= limitMs()) advance();
   }
@@ -171,12 +367,16 @@ function render() {
     b.setAttribute('aria-selected', String(b.dataset.mode === settings.mode)));
   el.stage.dataset.mode = settings.mode;
   syncPicker();
+  renderHistory();
+  el.dAliasLabel.textContent = 'Also written';   // free mode renames these two rows
+  el.dSameLabel.textContent = 'Same notes as';
+  if (freeing()) { renderFree(); updateStatus(true); return; }
 
   const card = st.card;
   el.pause.disabled = el.action.disabled = !card;
   el.play.disabled = true; // enabled below once the chord is visible on the keyboard
   if (!card) {
-    el.name.textContent = '—';
+    setName('—');
     el.long.textContent = 'Select at least one chord group and one root in Settings.';
     renderKeyboard(el.kb, new Map());
     el.details.hidden = true;
@@ -193,7 +393,7 @@ function render() {
   const spelled = spellChord(root, chord);
   el.play.disabled = !showKeys;
 
-  el.name.textContent = showName ? root + chord.symbol : '?';
+  setName(showName ? root + chord.symbol : '?');
   el.long.textContent = showName ? chord.name : 'name this chord';
 
   const notes = new Map();
@@ -222,6 +422,7 @@ function render() {
 }
 
 function updateStatus(force = false) {
+  if (freeing()) { updateFreeStatus(force); return; }
   const card = st.card;
   const ex = exercising();
   const lim = card ? limitMs() : Infinity;
@@ -386,6 +587,8 @@ function buildSettings() {
   exact.checked = settings.exactVoicing;
   exact.addEventListener('change', () => { settings.exactVoicing = exact.checked; persist(); st.exResult = null; render(); });
 
+  $('clearHistory').addEventListener('click', () => { st.history = []; saveHistory(st.history); renderHistory(); });
+
   const sound = $('sound');
   sound.checked = settings.sound;
   sound.addEventListener('change', () => {
@@ -436,12 +639,13 @@ function wire() {
   // tap anywhere on the stage (but not on buttons / keyboard / details) = reveal or next
   // (in exercise mode the card is only a "next" target once the answer is shown)
   el.stage.addEventListener('click', e => {
-    if (e.target.closest('button, .kb-wrap, .details')) return;
-    if (exercising() && st.phase !== 'revealed') return;
+    if (e.target.closest('button, .kb-wrap, .details, .history')) return;
+    if (freeing() || (exercising() && st.phase !== 'revealed')) return;
     advance();
   });
   el.action.addEventListener('click', advance);
   el.pause.addEventListener('click', () => {
+    if (freeing()) { clearFree(); return; }
     if (exercising()) { giveUp(); return; }   // "Show answer"
     st.paused = !st.paused;
     updateStatus(true);
@@ -462,6 +666,7 @@ function wire() {
 
   // second way to hear it: the Play button sounds the chord exactly as drawn on the keyboard
   el.play.addEventListener('click', () => {
+    if (freeing()) { if (st.sel.size) audio.play(sortedSel()); return; }   // free: play the user's own keys
     if (st.card) audio.play(chordMidi(st.card.rootPc, st.card.chord));
   });
 
@@ -471,7 +676,7 @@ function wire() {
   document.addEventListener('keydown', e => {
     if (st.dialogOpen || e.target.closest?.('button, input, select, textarea')) return;
     if (e.key === ' ' || e.key === 'Enter' || e.key === 'ArrowRight') { e.preventDefault(); advance(); }
-    else if ((e.key === 'p' || e.key === 'P') && !exercising()) { st.paused = !st.paused; updateStatus(true); }
+    else if ((e.key === 'p' || e.key === 'P') && !exercising() && !freeing()) { st.paused = !st.paused; updateStatus(true); }
   });
 
   $('openSettings').addEventListener('click', () => {
@@ -480,7 +685,7 @@ function wire() {
   });
   el.dialog.addEventListener('close', () => {
     st.dialogOpen = false;
-    if (st.dirtyPool) nextCard(); else render();
+    if (st.dirtyPool && !freeing()) nextCard(); else { st.dirtyPool = false; render(); }   // free mode ignores the chord pool
   });
   el.dialog.addEventListener('click', e => { if (e.target === el.dialog) el.dialog.close(); }); // backdrop
 }

@@ -121,7 +121,7 @@ button:focus-visible, input:focus-visible, select:focus-visible { outline: 3px s
   padding-bottom: 14px; padding-bottom: clamp(8px, 1.6dvh, 20px);
   cursor: pointer;
 }
-.picker, .status, .kb-wrap, .legend, .details, .controls { flex: none; }   /* only .card flexes; the rest keeps its size */
+.history, .picker, .status, .kb-wrap, .legend, .details, .controls { flex: none; }   /* only .card flexes; the rest keeps its size */
 
 .card {
   position: relative;
@@ -135,6 +135,7 @@ button:focus-visible, input:focus-visible, select:focus-visible { outline: 3px s
   font-size: clamp(2.2rem, min(11vw, 12dvh), 6.5rem);
   font-weight: 700; line-height: 1.05; letter-spacing: -.01em;
 }
+.chord-name.long { font-size: clamp(1.8rem, min(7.4vw, 9vh), 4.6rem); font-size: clamp(1.8rem, min(7.4vw, 9dvh), 4.6rem); }   /* long slash-chord names */
 .chord-long {
   color: var(--muted); min-height: 1.4em;
   font-size: clamp(.9rem, min(2.4vw, 2.6vh), 1.35rem);
@@ -160,6 +161,24 @@ button:focus-visible, input:focus-visible, select:focus-visible { outline: 3px s
 .chord-picker select { font-size: 1.05rem; min-width: 0; }
 .chord-picker button { padding: 0; font-size: 1.6rem; line-height: 1; }
 
+/* ---- history: the last 12 chords, small text; keeps its height when empty so nothing shifts ---- */
+.history {
+  display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); grid-auto-rows: 22px; gap: 4px 6px;
+  min-height: 48px; align-content: start; cursor: default;
+  font-size: .74rem; line-height: 20px; color: var(--muted);
+}
+.history .none { grid-column: 1 / -1; font-style: italic; }
+.history .chip {
+  padding: 0 8px; border: 1px solid var(--line); border-radius: 8px; background: var(--panel); color: var(--ink);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.history .chip b { font-weight: 700; margin-right: 3px; }   /* the exercise verdict glyph (check / cross) */
+@media (min-width: 900px), (max-height: 680px) {          /* wide or short screens: a single row of 12 */
+  .history { grid-template-columns: repeat(12, minmax(0, 1fr)); min-height: 22px; font-size: .7rem; }
+  .history .chip { padding: 0 5px; }
+}
+@media (max-width: 560px) { .history { grid-template-columns: repeat(3, minmax(0, 1fr)); min-height: 100px; } }
+
 /* ---- play button (top-right corner of the card; the card is not a tap target for it) ---- */
 .play { position: absolute; top: 10px; right: 10px; min-height: 44px; padding: 0 16px; font-weight: 600; z-index: 1; }
 .play span { font-size: 1.15em; }
@@ -172,6 +191,7 @@ button:focus-visible, input:focus-visible, select:focus-visible { outline: 3px s
 .key.white { fill: var(--key-white); }
 .key.black { fill: var(--key-black); }
 .key.on { fill: var(--key-on); stroke: var(--key-on-stroke); stroke-width: 1.5; }
+.key.answer { fill: var(--c-root); stroke: var(--ink-on-grey); }   /* exercise "Show answer": correct keys in yellow */
 
 /* degree badges: the function colour lives here, not on the key */
 .badge { stroke: var(--ink-on-grey); stroke-width: 1.5; pointer-events: none; }   /* taps always land on the key itself */
@@ -240,12 +260,13 @@ select { font: inherit; min-height: 44px; border-radius: 10px; border: 1px solid
   .controls button { flex: 1; }
 }
 
-/* very short screens (e.g. landscape with browser toolbars): tighten chrome so everything still fits */
-@media (max-height: 680px) {
+/* short screens (e.g. landscape with browser toolbars): tighten chrome so everything still fits */
+@media (max-height: 780px) {
   .top { padding: 4px 0; }
   button, .seg button { min-height: 40px; }
   .root-picker button, .chord-picker button, .chord-picker select { min-height: 38px; }
   .details { padding: 6px 14px; }
   .legend { font-size: .8rem; }
   .card { min-height: 80px; }
+  .chord-name { font-size: clamp(2rem, min(10vw, 9.5vh), 6rem); font-size: clamp(2rem, min(10vw, 9.5dvh), 6rem); }
 }
