@@ -306,6 +306,7 @@ function exerciseNotes(rootPc, chord, chordNotes, revealed, spelled) {
   const exact = settings.exactVoicing;
   const byPc = new Map(chordMidi(rootPc, chord).map((m, i) => [m % 12, spelled[i]]));
   const nameOf = m => byPc.get(m % 12) ?? rootName(m % 12, settings.accidentals);
+  const byPcNote = new Map([...chordNotes].map(([m, n]) => [m % 12, n]));
   const flagged = new Set(st.exResult && !st.exResult.ok ? st.exResult.wrong : []);
   const out = new Map();
   const gaveUp = revealed && !st.exSolved;   // "Show answer": the keys of the drawn answer are yellow instead of grey
@@ -313,9 +314,12 @@ function exerciseNotes(rootPc, chord, chordNotes, revealed, spelled) {
   for (const m of st.sel) {
     if (out.has(m)) continue;
     const right = isRightKey(m, rootPc, chord, exact);
-    out.set(m, !right && (revealed || flagged.has(m))
-      ? { mark: true, name: nameOf(m) }
-      : { plain: true, name: nameOf(m) });   // never yellow: yellow means exactly the keys of the drawn answer
+    const sameTone = revealed && right ? byPcNote.get(m % 12) : null;   // right note in another octave than the drawn voicing
+    out.set(m, sameTone
+      ? { ...sameTone }   // keeps its role badge (grey key, never yellow) so it doesn't look like a note the chord ignores
+      : !right && (revealed || flagged.has(m))
+        ? { mark: true, name: nameOf(m) }
+        : { plain: true, name: nameOf(m) });   // never yellow: yellow means exactly the keys of the drawn answer
   }
   return out;
 }
