@@ -37,12 +37,15 @@ Vanilla HTML/CSS/ES modules — no build step, no dependencies.
   altered fifths (incl. whole-tone `9♯5♯11`), altered dominants (`7alt`, `13♭9♯11`, `7♭9♭13` …) and
   quartal / quintal stacks.
   The 30 chords of `ChkromaLib/src/sound/intrah/Chord.java` are all included (same notes; the file's
-  min11 / 13th voicings, which stack the 3rd above the 9th, use close degree order here; dom11 omits its 3rd).
+  min11 / 13th voicings, which stack the 3rd above the 9th, use close degree order here).
+  Six chords leave a note out by convention — the 5th of `13♯11`, `7alt`, `7♭9♭13`, `9♭13`, `13♭9♯11` and the 3rd of `11`
+  (a `(5)` in the formula). The omitted note is named under the chord (`· left out: 5 (C♯)`); the setting
+  *Include the notes a chord usually leaves out* puts them all back. The 11th of a 13th chord counts as optional, not omitted.
 - On reveal: spelled note names, degrees, alternative chord symbols (`Δ7`, `ø7`, `-7` …) and other
   chords with the same notes (C6 = Am7).
 - Settings: reveal delay for the two quiz modes (0–30 s; 0 = no automatic reveal, tap to reveal — the default),
   auto-next (0 = tap), chord groups and root notes (used by the quizzes), accidentals (jazz / flats / sharps),
-  degree labels, note names, *colour-code before reveal* (Keys → Name), *exact voicing* (Exercise), auto-play,
+  degree labels, note names, *colour-code before reveal* (Keys → Name), *exact voicing* (Exercise), *include omitted notes*, auto-play,
   *Clear chord history*. Persisted in `localStorage`.
 
 Sound (always on a direct tap, no setting needed): **tap any key** to hear just that note — chord tone or
@@ -101,7 +104,7 @@ a tap (iOS rule); the first tap anywhere unlocks it.
 npm test        # node --test test/*.test.mjs  (no install needed)
 ```
 
-38 tests, all on pure modules plus the static files: the 30 `Chord.java` chords match the file (four revoiced ones by pitch class), catalogue
+46 tests, all on pure modules plus the static files: the 30 `Chord.java` chords match the file (four revoiced ones by pitch class), catalogue
 invariants (ascending, fits the keyboard for every root, unique ids and symbols), spelling and roles; Exercise
 judging (octaves, wrong / missing notes, every chord solves with its own voicing); Free-mode identification
 (inversions, ambiguous voicings, near matches, every chord recognised on every root); history rules; settings

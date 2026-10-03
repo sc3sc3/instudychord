@@ -1,6 +1,6 @@
 // inStudyChord - UI, quiz state machine and timers.
-import { CHORDS, CHORDS_BY_ID, GROUPS, ROLES, chordsInGroups, sameNotes } from './chords.js';
-import { rootName, spellChord, chordMidi } from './notes.js';
+import { CHORDS, CHORDS_BY_ID, GROUPS, ROLES, chordsInGroups, sameNotes, voicing } from './chords.js';
+import { rootName, spellChord, spellTone, chordMidi } from './notes.js';
 import { renderKeyboard } from './keyboard.js';
 import { createAudio } from './audio.js';
 import { evaluate, isRightKey, needed, readyToCheck, selectedCount } from './exercise.js';
@@ -62,7 +62,7 @@ function nextCard() {
   }
   if (settings.mode === 'explore') {
     // explore: the chosen chord, always shown fully, no timers
-    const next = { rootPc: settings.explore.rootPc, chord: CHORDS_BY_ID[settings.explore.chordId] };
+    const next = { rootPc: settings.explore.rootPc, chord: voicing(CHORDS_BY_ID[settings.explore.chordId], settings.fullVoicings) };
     st.card = next;
     st.phase = 'revealed';
     st.elapsed = 0;
@@ -76,7 +76,7 @@ function nextCard() {
     const prev = st.card;
     let card;
     for (let tries = 0; tries < 20; tries++) {
-      card = { rootPc: pick(roots), chord: pick(chords) };
+      card = { rootPc: pick(roots), chord: voicing(pick(chords), settings.fullVoicings) };
       if (!prev) break;
       // several chord types: never the same type twice; a single type: never the same root twice
       const repeat = chords.length > 1
@@ -108,6 +108,15 @@ function recordHistory(card, result = null, bassPc = null) {
 }
 
 let historyKey = '';
+
+// "· left out: 5 (C♯)": the notes this chord conventionally omits (none when 'include' is on), after the long name
+function appendOmitted(chord, root) {
+  if (!chord.omitted.length) return;
+  const tag = document.createElement('span');
+  tag.className = 'omitted';
+  tag.textContent = ` · left out: ${chord.omitted.map(t => `${t.label} (${spellTone(root, t)})`).join(', ')}`;
+  el.long.append(tag);
+}
 
 // long names (slash chords, ...) get a smaller font so they never run under the Play button
 function setName(text) {
@@ -166,7 +175,7 @@ function toggleFree(midi) {
 
 function revealFree() {
   if (!freeing() || st.phase === 'revealed' || distinctPcs() < 2) return;
-  const res = identify(st.sel);
+  const res = identify(st.sel, settings.fullVoicings);
   st.free = res;
   const top = res.matches[0];
   st.card = top ? { rootPc: top.rootPc, chord: top.chord } : null;
@@ -201,6 +210,7 @@ function renderFree() {
   }
   setName(title);
   el.long.textContent = sub;
+  if (top) appendOmitted(top.chord, rootName(top.rootPc, acc));
 
   // the user's own keys; once named they get the colour-coded degree numbers relative to the found root
   const notes = new Map();
@@ -391,6 +401,7 @@ function render() {
 
   setName(showName ? root + chord.symbol : '?');
   el.long.textContent = showName ? chord.name : 'name this chord';
+  if (showName) appendOmitted(chord, root);
 
   const notes = new Map();
   chordMidi(rootPc, chord).forEach((m, i) =>
@@ -409,7 +420,7 @@ function render() {
     const aliases = chord.aliases.map(a => root + a);
     el.dAliasRow.hidden = !aliases.length;
     el.dAliases.textContent = aliases.join('   ·   ');
-    const same = sameNotes(rootPc, chord).slice(0, 6)
+    const same = sameNotes(rootPc, chord, settings.fullVoicings).slice(0, 6)
       .map(x => rootName(x.rootPc, settings.accidentals) + x.chord.symbol);
     el.dSameRow.hidden = !same.length;
     el.dSame.textContent = same.join(',  ');
@@ -579,6 +590,9 @@ function buildSettings() {
     box.checked = settings[key];
     box.addEventListener('change', () => { settings[key] = box.checked; persist(); render(); });
   }
+  const full = $('fullVoicings');
+  full.checked = settings.fullVoicings;
+  full.addEventListener('change', () => { settings.fullVoicings = full.checked; poolChanged(); });   // new notes -> new card once the dialog closes
   const exact = $('exactVoicing');
   exact.checked = settings.exactVoicing;
   exact.addEventListener('change', () => { settings.exactVoicing = exact.checked; persist(); st.exResult = null; render(); });

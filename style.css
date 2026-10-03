@@ -142,6 +142,8 @@ button:focus-visible, input:focus-visible, select:focus-visible { outline: 3px s
   font-size: clamp(.9rem, min(2.4vw, 2.6dvh), 1.35rem);
 }
 
+.chord-long .omitted { display: inline-block; }   /* a wrapped label moves as a whole, never splits inside a note */
+
 .status { display: flex; align-items: center; gap: 12px; color: var(--muted); font-size: .9rem; }
 .bar { flex: 1; height: 8px; border-radius: 4px; background: var(--line); overflow: hidden; }
 .bar i { display: block; height: 100%; width: 100%; background: var(--accent); transform-origin: left center; transform: scaleX(0); }

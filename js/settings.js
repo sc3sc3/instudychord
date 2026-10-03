@@ -19,6 +19,7 @@ export function defaults() {
     degreeLabels: true,
     colorBefore: false,         // keys2name: colour-code before reveal
     exactVoicing: false,        // exercise: require the exact voicing (octaves) instead of just the notes
+    fullVoicings: false,        // put back the notes a chord conventionally leaves out (5th of a 9♭13, 3rd of an 11 ...)
   };
 }
 
@@ -49,6 +50,7 @@ export function sanitize(raw) {
     degreeLabels: bool(r.degreeLabels, d.degreeLabels),
     colorBefore: bool(r.colorBefore, d.colorBefore),
     exactVoicing: bool(r.exactVoicing, d.exactVoicing),
+    fullVoicings: bool(r.fullVoicings, d.fullVoicings),
   };
 }
 

@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { CHORDS, CHORDS_BY_ID, GROUPS, parseTone, sameNotes, pitchClasses } from '../js/chords.js';
+import { CHORDS, CHORDS_BY_ID, GROUPS, parseTone, sameNotes, pitchClasses, voicing } from '../js/chords.js';
 import { spellChord, spellTone, chordMidi, rootName, KEY_LOW, KEY_HIGH } from '../js/notes.js';
 import { defaults, sanitize } from '../js/settings.js';
 
@@ -177,4 +177,33 @@ test('enharmonic equivalents', () => {
   assert.ok(names(0, 'dim7').includes('E♭dim7'));
   assert.ok(!names(0, 'maj7').includes('Cmaj7'));
   assert.deepEqual(pitchClasses(0, CHORDS_BY_ID.dom9), [0, 2, 4, 7, 10]);
+});
+
+test('omitted notes: (tone) in a formula is left out of the usual voicing and listed', () => {
+  const omits = Object.fromEntries(CHORDS.filter(c => c.omitted.length).map(c => [c.id, c.omitted.map(t => t.token).join(' ')]));
+  assert.deepEqual(omits, { dom11: '3', dom13s11: '5', alt: '5', dom7b9b13: '5', dom9b13: '5', dom13b9s11: '5' });
+  assert.deepEqual([...CHORDS_BY_ID.dom9b13.semis], [0, 4, 10, 14, 20]);
+  assert.deepEqual([...voicing(CHORDS_BY_ID.dom9b13, true).semis], [0, 4, 7, 10, 14, 20]);
+  assert.deepEqual([...voicing(CHORDS_BY_ID.dom11, true).semis], [0, 4, 7, 10, 14, 17]);
+  assert.equal(voicing(CHORDS_BY_ID.dom9b13, false), CHORDS_BY_ID.dom9b13);
+  assert.equal(voicing(CHORDS_BY_ID.maj7, true), CHORDS_BY_ID.maj7);          // nothing omitted: same chord
+  assert.deepEqual(voicing(CHORDS_BY_ID.dom9b13, true).omitted, []);
+  assert.equal(spellChord('F\u266f', voicing(CHORDS_BY_ID.dom9b13, true)).join(' '), 'F\u266f A\u266f C\u266f E G\u266f D');
+  assert.equal(spellTone('F\u266f', CHORDS_BY_ID.dom9b13.omitted[0]), 'C\u266f');
+});
+
+test('full voicings: same identity, strictly ascending, within the keyboard, no repeated pitch class', () => {
+  for (const c of CHORDS) {
+    const f = voicing(c, true);
+    assert.deepEqual([f.id, f.symbol, f.name, f.group], [c.id, c.symbol, c.name, c.group]);
+    assert.equal(f.semis.length, c.semis.length + c.omitted.length, c.id);
+    for (let i = 1; i < f.semis.length; i++) assert.ok(f.semis[i] > f.semis[i - 1], `${c.id}: full not ascending`);
+    assert.ok(f.semis.at(-1) <= 21, `${c.id}: full reach > 21`);
+    assert.equal(new Set(f.semis.map(x => x % 12)).size, f.semis.length, `${c.id}: full repeats a pitch class`);
+  }
+});
+
+test('sameNotes compares like with like when full voicings are on', () => {
+  const full = voicing(CHORDS_BY_ID.dom9b13, true);
+  for (const x of sameNotes(0, full, true)) assert.deepEqual(pitchClasses(x.rootPc, x.chord), pitchClasses(0, full));
 });

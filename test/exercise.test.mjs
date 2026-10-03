@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { CHORDS, CHORDS_BY_ID } from '../js/chords.js';
+import { CHORDS, CHORDS_BY_ID, voicing } from '../js/chords.js';
 import { chordMidi } from '../js/notes.js';
 import { evaluate, needed, readyToCheck, selectedCount, isRightKey } from '../js/exercise.js';
 import { sanitize } from '../js/settings.js';
@@ -59,8 +59,8 @@ test('isRightKey', () => {
   assert.equal(isRightKey(49, C, CHORDS_BY_ID.maj), false);
 });
 
-test('every chord in every root solves with its own voicing in both modes', () => {
-  for (const chord of CHORDS) for (let pc = 0; pc < 12; pc++) {
+for (const full of [false, true]) test(`every chord in every root solves with its own voicing in both modes (full voicings: ${full})`, () => {
+  for (const chord of CHORDS.map(c => voicing(c, full))) for (let pc = 0; pc < 12; pc++) {
     const keys = new Set(chordMidi(pc, chord));
     for (const exact of [false, true]) {
       assert.equal(evaluate(keys, pc, chord, exact).ok, true, `${chord.id}@${pc} exact=${exact}`);
@@ -77,4 +77,7 @@ test('settings: exercise mode and exactVoicing are sanitized', () => {
   assert.equal(sanitize({}).exactVoicing, false);
   assert.equal(sanitize({ exactVoicing: true }).exactVoicing, true);
   assert.equal(sanitize({ exactVoicing: 'yes' }).exactVoicing, false);
+  assert.equal(sanitize({}).fullVoicings, false);
+  assert.equal(sanitize({ fullVoicings: true }).fullVoicings, true);
+  assert.equal(sanitize({ fullVoicings: 1 }).fullVoicings, false);
 });

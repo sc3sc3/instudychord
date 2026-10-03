@@ -58,14 +58,31 @@ function labelOf(n, acc) {
 }
 
 // id, group, symbol, long name, aliases, tones, fromFile (listed in Chord.java)
+// A token in parentheses, e.g. '1 3 (5) b7 9 b13', belongs to the symbol but is conventionally left out: `tones` /
+// `semis` are the usual voicing without it, `omitted` lists the left-out tones, and `full` is the same chord with
+// them put back (`voicing(chord, true)`). A chord without omissions is its own `full`.
 function chord(id, group, symbol, name, aliases, formula, fromFile = false) {
-  const tones = formula.split(' ').map(parseTone);
-  return Object.freeze({
+  const parsed = formula.split(' ').map(tok => (tok.startsWith('(')
+    ? { tone: parseTone(tok.slice(1, -1)), left: true }
+    : { tone: parseTone(tok), left: false }));
+  const tonesOf = list => Object.freeze(list.map(p => p.tone));
+  const shape = (list, omitted) => ({
     id, group, symbol, name, aliases, formula, fromFile,
-    tones: Object.freeze(tones),
-    semis: Object.freeze(tones.map(t => t.semis)),
+    tones: tonesOf(list),
+    semis: Object.freeze(list.map(p => p.tone.semis)),
+    omitted: Object.freeze(omitted),
   });
+  const usual = shape(parsed.filter(p => !p.left), parsed.filter(p => p.left).map(p => p.tone));
+  if (!usual.omitted.length) { usual.full = usual; return Object.freeze(usual); }
+  const full = shape(parsed, []);   // formula is written in ascending pitch order, so this is too
+  usual.full = full;
+  full.full = full;
+  Object.freeze(full);
+  return Object.freeze(usual);
 }
+
+// The chord as it is drawn: with its conventionally omitted notes put back (full) or without them.
+export const voicing = (chordDef, full) => (full ? chordDef.full : chordDef);
 
 const F = true;
 const b = '♭', s = '♯';
@@ -130,8 +147,8 @@ export const CHORDS = Object.freeze([
   chord('min7b9', 'ninths', 'm7' + b + '9', 'minor seventh flat nine', ['m7(' + b + '9)', 'min7' + b + '9'], '1 b3 5 b7 b9'),
   chord('min7b5b9', 'ninths', 'm7' + b + '5' + b + '9', 'half-diminished flat nine', ['ø' + b + '9', 'm7' + b + '5(' + b + '9)'], '1 b3 b5 b7 b9'),
 
-  // --- elevenths (dom11 omits the 3rd on purpose: it clashes with the 11th)
-  chord('dom11', 'elevenths', '11', 'dominant eleventh', ['dom11'], '1 5 b7 9 11', F),
+  // --- elevenths (dom11 leaves out the 3rd by convention: it clashes with the 11th)
+  chord('dom11', 'elevenths', '11', 'dominant eleventh', ['dom11'], '1 (3) 5 b7 9 11', F),
   chord('min11', 'elevenths', 'm11', 'minor eleventh', ['min11', '-11'], '1 b3 5 b7 9 11', F),
   chord('maj11', 'elevenths', 'maj11', 'major eleventh', ['Δ11', 'M11'], '1 3 5 7 9 11'),
   chord('minmaj11', 'elevenths', 'm(maj11)', 'minor-major eleventh', ['mMaj11', '-Δ11'], '1 b3 5 7 9 11'),
@@ -154,7 +171,7 @@ export const CHORDS = Object.freeze([
   chord('maj13s11', 'lydian', 'maj13' + s + '11', 'major thirteenth sharp eleven', ['Δ13' + s + '11', 'maj13(' + s + '11)'], '1 3 5 7 9 #11 13'),
   chord('dom7s11', 'lydian', '7' + s + '11', 'dominant seventh sharp eleven', ['7(' + s + '11)'], '1 3 5 b7 #11'),
   chord('dom9s11', 'lydian', '9' + s + '11', 'dominant ninth sharp eleven', ['9(' + s + '11)'], '1 3 5 b7 9 #11'),
-  chord('dom13s11', 'lydian', '13' + s + '11', 'dominant thirteenth sharp eleven', ['13(' + s + '11)'], '1 3 b7 9 #11 13'),
+  chord('dom13s11', 'lydian', '13' + s + '11', 'dominant thirteenth sharp eleven', ['13(' + s + '11)'], '1 3 (5) b7 9 #11 13'),
   chord('min7s11', 'lydian', 'm7' + s + '11', 'minor seventh sharp eleven', ['m7(' + s + '11)'], '1 b3 5 b7 #11'),
   chord('min9s11', 'lydian', 'm9' + s + '11', 'minor ninth sharp eleven', ['m9(' + s + '11)'], '1 b3 5 b7 9 #11'),
   chord('maj7s5s11', 'lydian', 'maj7' + s + '5' + s + '11', 'major seventh sharp five sharp eleven (lydian augmented)', ['Δ7' + s + '5' + s + '11'], '1 3 #5 7 #11'),
@@ -181,14 +198,14 @@ export const CHORDS = Object.freeze([
   chord('dom7s5b9', 'altered_dominants', '7' + s + '5' + b + '9', 'dominant seventh sharp five flat nine', ['7(' + s + '5,' + b + '9)'], '1 3 #5 b7 b9', F),
   chord('dom7s5s9', 'altered_dominants', '7' + s + '5' + s + '9', 'dominant seventh sharp five sharp nine', ['7(' + s + '5,' + s + '9)'], '1 3 #5 b7 #9', F),
   chord('dom13b9', 'altered_dominants', '13' + b + '9', 'dominant thirteenth flat nine', ['13(' + b + '9)'], '1 3 5 b7 b9 13'),
-  chord('alt', 'altered_dominants', '7alt', 'altered dominant (7' + s + '9' + b + '13)', ['7' + s + '9' + b + '13', 'alt'], '1 3 b7 #9 b13'),
+  chord('alt', 'altered_dominants', '7alt', 'altered dominant (7' + s + '9' + b + '13)', ['7' + s + '9' + b + '13', 'alt'], '1 3 (5) b7 #9 b13'),
   chord('dom7b9s11', 'altered_dominants', '7' + b + '9' + s + '11', 'dominant seventh flat nine sharp eleven', ['7(' + b + '9,' + s + '11)'], '1 3 5 b7 b9 #11'),
   chord('dom7s9s11', 'altered_dominants', '7' + s + '9' + s + '11', 'dominant seventh sharp nine sharp eleven', ['7(' + s + '9,' + s + '11)'], '1 3 5 b7 #9 #11'),
-  chord('dom7b9b13', 'altered_dominants', '7' + b + '9' + b + '13', 'dominant seventh flat nine flat thirteen', ['7(' + b + '9,' + b + '13)'], '1 3 b7 b9 b13'),
+  chord('dom7b9b13', 'altered_dominants', '7' + b + '9' + b + '13', 'dominant seventh flat nine flat thirteen', ['7(' + b + '9,' + b + '13)'], '1 3 (5) b7 b9 b13'),
   chord('dom7b13', 'altered_dominants', '7' + b + '13', 'dominant seventh flat thirteen', ['7(' + b + '13)', '7' + b + '6'], '1 3 5 b7 b13'),
-  chord('dom9b13', 'altered_dominants', '9' + b + '13', 'dominant ninth flat thirteen', ['9(' + b + '13)'], '1 3 b7 9 b13'),
+  chord('dom9b13', 'altered_dominants', '9' + b + '13', 'dominant ninth flat thirteen', ['9(' + b + '13)'], '1 3 (5) b7 9 b13'),
   chord('dom13s9', 'altered_dominants', '13' + s + '9', 'dominant thirteenth sharp nine', ['13(' + s + '9)'], '1 3 5 b7 #9 13'),
-  chord('dom13b9s11', 'altered_dominants', '13' + b + '9' + s + '11', 'dominant thirteenth flat nine sharp eleven', ['13(' + b + '9,' + s + '11)'], '1 3 b7 b9 #11 13'),
+  chord('dom13b9s11', 'altered_dominants', '13' + b + '9' + s + '11', 'dominant thirteenth flat nine sharp eleven', ['13(' + b + '9,' + s + '11)'], '1 3 (5) b7 b9 #11 13'),
 
   // --- quartal & quintal (stacked perfect fourths / fifths from the root)
   chord('quartal3', 'quartal', 'quartal', 'quartal triad (stacked fourths)', [], '1 4 b7'),
@@ -211,11 +228,13 @@ export function pitchClasses(rootPc, chordDef) {
 }
 
 // Other root/chord combinations sounding the identical set of pitch classes
-// (C6 = Am7, Cdim7 = E♭dim7 ...). Excludes the chord itself.
-export function sameNotes(rootPc, chordDef) {
+// (C6 = Am7, Cdim7 = E♭dim7 ...). Excludes the chord itself. `full`: compare with every chord's
+// omitted notes put back (pass the same flag the chord was resolved with).
+export function sameNotes(rootPc, chordDef, full = false) {
   const key = pitchClasses(rootPc, chordDef).join(',');
   const out = [];
-  for (const other of CHORDS) {
+  for (const base of CHORDS) {
+    const other = voicing(base, full);
     for (let pc = 0; pc < 12; pc++) {
       if (pc === rootPc && other.id === chordDef.id) continue;
       if (pitchClasses(pc, other).join(',') === key) out.push({ rootPc: pc, chord: other });

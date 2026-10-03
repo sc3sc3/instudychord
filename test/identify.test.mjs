@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { CHORDS } from '../js/chords.js';
+import { CHORDS, voicing } from '../js/chords.js';
 import { chordMidi, rootName } from '../js/notes.js';
 import { identify } from '../js/identify.js';
 
@@ -55,10 +55,10 @@ test('no exact match -> near matches with the omitted note', () => {
   assert.equal(identify(set(C3, C3 + 1, C3 + 2, C3 + 3, C3 + 4)).matches.length, 0);   // a cluster: nothing
 });
 
-test('every chord, on every root, is recognised from its own voicing', () => {
-  for (const chord of CHORDS) for (let pc = 0; pc < 12; pc++) {
+for (const full of [false, true]) test(`every chord, on every root, is recognised from its own voicing (full voicings: ${full})`, () => {
+  for (const chord of CHORDS.map(c => voicing(c, full))) for (let pc = 0; pc < 12; pc++) {
     const keys = new Set(chordMidi(pc, chord));
-    const r = identify(keys);
+    const r = identify(keys, full);
     if (r.tooFew) { assert.equal(keys.size < 2 || new Set([...keys].map(m => m % 12)).size < 2, true); continue; }
     const mine = r.matches.find(m => m.rootPc === pc && m.chord.id === chord.id);
     assert.ok(mine, `${chord.id}@${pc} not found`);

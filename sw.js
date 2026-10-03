@@ -1,4 +1,4 @@
-// deployed: v23
+// deployed: v24
 // Cache-first app-shell service worker. The version lives in js/version.js (shown in the UI too):
 // bump it whenever a shell file changes so installed copies pick up the update.
 importScripts('js/version.js');
