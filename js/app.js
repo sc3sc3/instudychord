@@ -114,7 +114,7 @@ function appendOmitted(chord, root) {
   if (!chord.omitted.length) return;
   const tag = document.createElement('span');
   tag.className = 'omitted';
-  tag.textContent = ` · left out: ${chord.omitted.map(t => `${t.label} (${spellTone(root, t)})`).join(', ')}`;
+  tag.textContent = `left out: ${chord.omitted.map(t => `${t.label} (${spellTone(root, t)})`).join(', ')}`;
   el.long.append(tag);
 }
 
