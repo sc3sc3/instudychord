@@ -40,7 +40,7 @@ test('enharmonic spelling is irrelevant: only the key matters', () => {
 });
 
 test('counts and the auto-check threshold', () => {
-  const maj13 = CHORDS_BY_ID.maj13;                        // file voicing, 6 distinct pitch classes
+  const maj13 = CHORDS_BY_ID.maj13;                        // 6 distinct pitch classes
   assert.equal(needed(C, maj13), 6);
   assert.equal(needed(C, maj13, true), 6);
   // two octaves of the same note count once in pitch-class mode, twice in exact mode

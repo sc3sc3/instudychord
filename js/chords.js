@@ -130,9 +130,9 @@ export const CHORDS = Object.freeze([
   chord('min7b9', 'ninths', 'm7' + b + '9', 'minor seventh flat nine', ['m7(' + b + '9)', 'min7' + b + '9'], '1 b3 5 b7 b9'),
   chord('min7b5b9', 'ninths', 'm7' + b + '5' + b + '9', 'half-diminished flat nine', ['ø' + b + '9', 'm7' + b + '5(' + b + '9)'], '1 b3 b5 b7 b9'),
 
-  // --- elevenths (file voicings: 5th stacked first, 3rd moved up / omitted)
+  // --- elevenths (dom11 omits the 3rd on purpose: it clashes with the 11th)
   chord('dom11', 'elevenths', '11', 'dominant eleventh', ['dom11'], '1 5 b7 9 11', F),
-  chord('min11', 'elevenths', 'm11', 'minor eleventh', ['min11', '-11'], '1 5 b7 9 b10 11', F),
+  chord('min11', 'elevenths', 'm11', 'minor eleventh', ['min11', '-11'], '1 b3 5 b7 9 11', F),
   chord('maj11', 'elevenths', 'maj11', 'major eleventh', ['Δ11', 'M11'], '1 3 5 7 9 11'),
   chord('minmaj11', 'elevenths', 'm(maj11)', 'minor-major eleventh', ['mMaj11', '-Δ11'], '1 b3 5 7 9 11'),
   chord('min11b5', 'elevenths', 'm11' + b + '5', 'half-diminished eleventh', ['ø11'], '1 b3 b5 b7 9 11'),
@@ -140,9 +140,9 @@ export const CHORDS = Object.freeze([
   chord('maj7add11', 'elevenths', 'maj7(add11)', 'major seventh added eleventh', ['Δ7(add11)', 'maj7add11'], '1 3 5 7 11'),
 
   // --- thirteenths
-  chord('dom13', 'thirteenths', '13', 'dominant thirteenth', ['dom13'], '1 5 b7 9 10 13', F),
-  chord('min13', 'thirteenths', 'm13', 'minor thirteenth', ['min13', '-13'], '1 5 b7 9 b10 13', F),
-  chord('maj13', 'thirteenths', 'maj13', 'major thirteenth', ['Δ13', 'M13'], '1 5 7 9 10 13', F),
+  chord('dom13', 'thirteenths', '13', 'dominant thirteenth', ['dom13'], '1 3 5 b7 9 13', F),
+  chord('min13', 'thirteenths', 'm13', 'minor thirteenth', ['min13', '-13'], '1 b3 5 b7 9 13', F),
+  chord('maj13', 'thirteenths', 'maj13', 'major thirteenth', ['Δ13', 'M13'], '1 3 5 7 9 13', F),
   chord('minmaj13', 'thirteenths', 'm(maj13)', 'minor-major thirteenth', ['mMaj13', '-Δ13'], '1 b3 5 7 9 13'),
   chord('dom7add13', 'thirteenths', '7(add13)', 'dominant seventh added thirteenth', ['7/13', '7add13'], '1 3 5 b7 13'),
   chord('min7add13', 'thirteenths', 'm7(add13)', 'minor seventh added thirteenth', ['m7add13'], '1 b3 5 b7 13'),

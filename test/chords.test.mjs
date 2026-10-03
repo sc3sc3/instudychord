@@ -19,12 +19,20 @@ const JAVA = {
   dom7s5b9: [0, 4, 8, 10, 13], dom7s5s9: [0, 4, 8, 10, 15],
 };
 
-test('all 30 Chord.java chords are present with identical semitones', () => {
+// Chord.java stacks the 3rd above the 9th in these; the app uses close degree order instead (same notes).
+const REVOICED = new Set(['min11', 'dom13', 'min13', 'maj13']);
+
+test('all 30 Chord.java chords are present (same semitones, revoiced ones same notes)', () => {
   assert.equal(Object.keys(JAVA).length, 30);
   for (const [id, semis] of Object.entries(JAVA)) {
     const c = CHORDS_BY_ID[id];
     assert.ok(c, `missing chord ${id}`);
-    assert.deepEqual([...c.semis], semis, id);
+    if (REVOICED.has(id)) {
+      assert.deepEqual([...new Set(c.semis.map(x => x % 12))].sort((a, b) => a - b), [...new Set(semis.map(x => x % 12))].sort((a, b) => a - b), id);
+      assert.ok(c.semis.every((x, i) => i === 0 || x > c.semis[i - 1]), `${id} ascending`);
+    } else {
+      assert.deepEqual([...c.semis], semis, id);
+    }
     assert.equal(c.fromFile, true, `${id} should be flagged fromFile`);
   }
   assert.equal(CHORDS.filter(c => c.fromFile).length, 30);
@@ -100,7 +108,8 @@ test('spelling', () => {
   const sp = (root, id) => spellChord(root, CHORDS_BY_ID[id]).join(' ');
   assert.equal(sp('C', 'dom7b5'), 'C E G♭ B♭');
   assert.equal(sp('F♯', 'dim7'), 'F♯ A C E♭');
-  assert.equal(sp('B', 'dom13'), 'B F♯ A C♯ D♯ G♯'); // file voicing
+  assert.equal(sp('B', 'dom13'), 'B D♯ F♯ A C♯ G♯');
+  assert.equal(sp('G', 'dom13'), 'G B D F A E');
   assert.equal(sp('D♭', 'maj9'), 'D♭ F A♭ C E♭');
 });
 

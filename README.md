@@ -36,8 +36,8 @@ Vanilla HTML/CSS/ES modules — no build step, no dependencies.
   chords (`add♯11`, `m(add11)` …), sixths, sevenths, ninths, elevenths, thirteenths, Lydian / ♯11,
   altered fifths (incl. whole-tone `9♯5♯11`), altered dominants (`7alt`, `13♭9♯11`, `7♭9♭13` …) and
   quartal / quintal stacks.
-  The 30 chords of `ChkromaLib/src/sound/intrah/Chord.java` are all included with identical voicings
-  (including its 11th/13th voicings, where the 3rd sits above the 9th).
+  The 30 chords of `ChkromaLib/src/sound/intrah/Chord.java` are all included (same notes; the file's
+  min11 / 13th voicings, which stack the 3rd above the 9th, use close degree order here; dom11 omits its 3rd).
 - On reveal: spelled note names, degrees, alternative chord symbols (`Δ7`, `ø7`, `-7` …) and other
   chords with the same notes (C6 = Am7).
 - Settings: reveal delay for the two quiz modes (0–30 s; 0 = no automatic reveal, tap to reveal — the default),
@@ -101,7 +101,7 @@ a tap (iOS rule); the first tap anywhere unlocks it.
 npm test        # node --test test/*.test.mjs  (no install needed)
 ```
 
-38 tests, all on pure modules plus the static files: the 30 `Chord.java` chords match the file verbatim, catalogue
+38 tests, all on pure modules plus the static files: the 30 `Chord.java` chords match the file (four revoiced ones by pitch class), catalogue
 invariants (ascending, fits the keyboard for every root, unique ids and symbols), spelling and roles; Exercise
 judging (octaves, wrong / missing notes, every chord solves with its own voicing); Free-mode identification
 (inversions, ambiguous voicings, near matches, every chord recognised on every root); history rules; settings
